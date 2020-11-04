@@ -1,0 +1,21 @@
+---
+title: "Midterm Project"
+author: "Jenna Moscaritolo"
+date: "December 1, 2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+```{r}
+albums_data <- read.csv("Albums.csv")
+artist_data <- read.csv("Artist.csv")
+edges_data <- read.csv("Edges.csv")
+genre_data <- read.csv("Genre.csv")
+subgenre_data <- read.csv("Subgenre.csv")
+year_data <- read.csv("Year.csv")
+```
