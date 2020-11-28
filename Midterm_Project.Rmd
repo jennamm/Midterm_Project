@@ -12,10 +12,13 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Introduction
 
 ```{r}
-albums_data <- read.csv("Albums.csv")
-artist_data <- read.csv("Artist.csv")
-edges_data <- read.csv("Edges.csv")
-genre_data <- read.csv("Genre.csv")
-subgenre_data <- read.csv("Subgenre.csv")
-year_data <- read.csv("Year.csv")
+full_data<- read.csv("albumlist.csv")
 ```
+
+```{r}
+
+```
+
+
+
+
