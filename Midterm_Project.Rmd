@@ -1,24 +1,189 @@
 ---
-title: "Midterm Project"
+title: "Top Music Genres"
 author: "Jenna Moscaritolo"
-date: "December 1, 2020"
+date: "December 10, 2020"
 output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+library(dplyr)
+library(tidyr)
+library(kableExtra)
+library(ggplot2)
+library(nnet)
+library(arm)
+library(performance)
+library(VGAM)
+library(kableExtra)
 ```
+
+## Abstract
+
+In this project, we will look at top 500 albums from the years 1955-2011 which was used from The Rolling Stone magazine. We will be looking at the probabilities of each genre based on which genre is the most popular in each year. Below is a bar graph of the different genres where, after data cleaning, there is only one genre per year (2009 has no data). For the initial data, look at Figure 1 in the Appendix.
+
 
 ## Introduction
 
-```{r}
+The Rolling Stone is a monthly magazine that comments on ideas of popular culture. Founded in San Francisco, California, it was initially known for its coverage of rock music, but in the 1990s, the company expanded its strict range of music to popular entertainment forms such as television shows and actors. Nowadays, it even covers politics.
+
+The dataset from The Rolling Stone has six column vectors: Number (number album is listed), Year (year album was released), Album (album name), Artist (artist name), Genre (main genre of album), and Subgenre (extra genre information of album). We will only be looking at Year and Genre for this project.
+
+The Year values range from 1955 to 2011 with no data for 2009 as there are no entries, meaning that there must not have been a top 500 album in 2009. After looking at the raw Genre data, I decided to use just the first word of each entry. The 13 Genre categories are Blues, Jazz, Classical, Reggae, World, Pop, Stage, Folk, Latin, Electronic, Funk, Hip, and Rock (Note: World includes country, Stage includes screen, and Folk includes soul).
+
+```{r, fig.height = 2.8, fig.cap = "Initial EDA: Density Plot"}
+# Reading the full dataset
 full_data<- read.csv("albumlist.csv")
+
+# Looking at all genres listed before separation
+before_sep <- full_data$Genre
+
+# Separating the first word in the "Genre" column - we will only use the first word
+first_word <- separate(full_data, c("Genre"), "Genre")
+df_words <- subset(first_word, select = - Subgenre)
+df_num <- df_words
+
+# Density plot
+ggplot(df_words, aes(x = Year, group = Genre, fill = Genre)) +
+    geom_density(adjust = 1.5, alpha = 0.5)
 ```
+
+This density plot shows how often each genre is recorded for each year of the dataset (1955-2011). Although it is sometimes tough to distinguish the colors, it is clear that Rock was the main genre, by far, around the years 1971 to 1976 and around a similar group of years (about 1968-1982), pop became popular. It seems that around 1985 to 2008, the most popular genre was Hip Hop.
+
+The main questions that I will be answering in this report are what will the top three categories be over the next few years and how will the popularity of the different categories change over time.
+
+
+## Method
+
+I started with a multinomial regression because I knew the data is categorical. So, I fit this model using multinom() and vglm(). I decided to stick with multinom() because vglm() had more information that was not relevant to the project. The function multinom() includes the coefficients and the standard errors of each Genre (other than Blues as that is considered the baseline).
+
+Here is a scatterplot of the Genres over the years.
+
+```{r, fig.cap = "Scatterplot of Genre vs. Year"}
+ggplot(df_words) + geom_point(aes(x = Genre, y = Year))
+```
+
+Although the fit using vglm() can be calculated, when I try to make a binned residual plot, it comes with an error indicating that it might be better for ordinal categorical data rather than nomial. You can find the binned residual plot in the Appendix.
+
+
+## Result
+
+To interpret this model, we have to look at the log risk ratios. We will be using the baseline Genre, Blues, and the denominator. So, we calculate each log risk ratio by the below equations and we interpret it by these:
+
+$log(\frac{P(Y = Genre)}{P(Y = Blues)}) < 0$ then $P(Y = Genre)$ is smaller
+
+$log(\frac{P(Y = Genre)}{P(Y = Blues)}) = 0$ then the probabilities are the same
+
+$log(\frac{P(Y = Genre)}{P(Y = Blues)}) > 0$ then $P(Y = Genre)$ is larger
+
+Below is a table with the count of each genre and their calculated probabilities. The appendix has a table of the log risk ratios and the Discussion section will explain each log risk ratio.
 
 ```{r}
+x <- table(df_words$Genre)
+w <- data.frame(x)
+v <- sum(w$Freq)
+prob <- w$Freq/v
 
+table <- cbind(w, Prob = prob)
+new1 <- table %>% arrange(desc(Freq))
+
+kable(new1, "simple", align = "ccc", caption = "Probabilities of Genres")
 ```
 
 
+## Discussion
+
+Below is the same table as what is in the Result section but with an added column of the long risk ratios. Here, we remember that if the log risk ratio is greater than zero, the top probability is larger. If it is equal to zero, the top probability is the same. If it is less than zero, the top probability is smaller.
+
+```{r}
+risk_ratios <- table$Prob/0.018
+log_rr <- log(risk_ratios)
+
+new_table <- cbind(table, Log.Risk.Ratio = log_rr)
+new2 <- new_table %>% arrange(desc(Log.Risk.Ratio))
+
+kable(new2, "simple", align = "ccc", caption = "Log Risk Ratios of Genres")
+```
+
+From the table above, on one hand, it is clear that the genres of Rock, Funk, Electronic, Hip, Jazz, and Folk are greater than zero, meaning that those probabilities are larger than the baseline of Blues. On the other hand, Reggae, Pop, Classical, and Latin log risk ratios are less than zero, meaning that these probabilities are smaller than the baseline of Blues. As stated before, the Blues genre log risk ratio is equal to zero because it is considered the baseline.
+
+So, to answer the first main question of what will the top three categories be over the next few years, it seems that Rock, Funk, and Electronic have the best chance of being the top album genre in the next few years based on the log risk ratios but the scatterplot in the Method section shows that Hip Hop could be popular as well. The second question of how will the popularity of the different categories change over time can be determined the most by looking at the density plot in the Introduction section. It seems that in the most recent years, Rock, Hip Hop, Electronic, Funk, and Latin were the highest ranking genres. We see that Latin has only one data point, so it would not be likely that that would be a popular genre in later years. Rock has always been popular and Hip Hop has been popular lately. Electronic is dissipating over the years.
 
 
+## Bibliography
+
+Holtz, Yan. “Help and Inspiration for R Charts.” The R Graph Gallery, www.r-graph-gallery.com/index.html.
+
+“Latex Equation Editor.” LaTex Equation Editor, www.tutorialspoint.com/latex_equation_editor.htm.
+
+Master of Science in Statistical Practice Presentations.
+
+“Search All 21,141 CRAN, Bioconductor and GitHub Packages.” R Documentation and Manuals | R Documentation, www.rdocumentation.org/.
+
+
+## Appendix
+
+Here is a scatterplot of only the top genre per year.
+
+```{r, fig.cap = "Scatterplot of One Genre per Year"}
+# Only one genre per year
+df_single_word <- df_words[!duplicated(df_words$Year), ]
+ggplot(df_single_word) + geom_point(aes(x = Genre, y = Year))
+
+linear <- lm(Year ~ Genre, data = df_single_word)
+```
+
+Here are the coefficients of the multinom() regression:
+
+```{r, echo = FALSE, fig.cap = "Multinomial Model Coefficients"}
+fit1 <- multinom(Genre ~ Year, data = df_words)
+g <- coef(fit1)
+
+kable(g, "simple", align = "cc", caption = "multinom() Regression Coefficients")
+```
+
+
+Here are the coefficients of the vglm() regression:
+
+```{r, fig.cap = "Multinomial Model Coefficients"}
+fit2 <- vglm(Genre ~ Year, family = multinomial, data = df_words)
+f <- coef(fit2)
+
+kable(f, "simple", align = "c", caption = "vglm() Regression Coefficients")
+```
+
+
+This plot below shows the amount of times that each genre has been included in the dataset of 500 album genres. It is clear the Rock is the genre that is the most popular over the time span of 56 years (1955-2011) with World and Stage genres not in the dataset at all.
+
+It is clear that this binned residual has a zero percent good fit because of the drastically different categorical data. Also, it really limits what I can do with the data because the data is nomial categorical rather than ordinal.
+
+```{r, warnings = FALSE, fig.cap = "Binned Residual Plot"}
+binned_residuals(fit1)
+```
+
+
+Here is a bar plot of what I wanted to do with the data first. I wanted to rank each genre based on their level of intensity. So, I ranked them 1-13, where 1 is the lowest intensity and 13 is the highest, and plotted them. I wanted the x axis to have the genres in order from 1-13, but the data is still nomial categorical rather than ordinal. So, it was tedious and ultimately took to long to order that data without doing it manually.
+
+```{r, fig.cap = "Multinomial Model Coefficients"}
+# Number Genre
+num_rankings <-
+  ifelse(df_num$Genre == "Blues", 1,
+         ifelse(df_num$Genre == "Jazz", 2,
+                ifelse(df_num$Genre == "Classical", 3,
+                       ifelse(df_num$Genre == "Reggae", 4,
+                              ifelse(df_num$Genre == "World", 5,
+                                     ifelse(df_num$Genre == "Pop", 6,
+                                            ifelse(df_num$Genre == "Stage", 7,
+                                                   ifelse(df_num$Genre == "Folk", 8,
+                                                          ifelse(df_num$Genre == "Latin", 9,
+                                                                 ifelse(df_num$Genre == "Electronic", 10,
+                                                                        ifelse(df_num$Genre == "Funk", 11,
+                                                                               ifelse(df_num$Genre == "Hip", 12,
+                                                                                      ifelse(df_num$Genre == "Rock", 13, "NA"
+                                                                                             )))))))))))))
+
+# Substituting in the new column
+df_num[,"Genre"] <- num_rankings
+
+ggplot(df_num) + geom_bar(aes(x = Genre))
+```
